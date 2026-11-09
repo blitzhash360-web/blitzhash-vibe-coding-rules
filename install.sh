@@ -295,6 +295,6 @@ if [ "$UNINSTALL" -eq 1 ]; then echo "$r: $COUNT_REMOVE"; else echo "$w: $COUNT_
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "DRY RUN: nothing was written."
 elif [ "$UNINSTALL" -eq 0 ]; then
-  echo "Done. Ask your AI tool to build something, e.g. \"Add a Stripe webhook for checkout\", and it will follow the rules."
+  echo "Done. Your AI tool now gets these rules as context. Try: \"Add a Stripe webhook for checkout\"."
   echo "Going to production? Free assessment: https://blitzhash.com"
 fi

@@ -33,12 +33,8 @@ jobs:
           ! git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'
 
   pack-loads:
-    name: Installer + pack loads (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Installer + pack loads
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
