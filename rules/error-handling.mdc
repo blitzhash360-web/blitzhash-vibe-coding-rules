@@ -1,0 +1,41 @@
+---
+description: Error handling and logging for server code and UI. Fail closed, generic messages to users with a request id, structured server logs without secrets or personal data, timeouts and retries for external calls.
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.mjs,**/*.py
+alwaysApply: false
+---
+
+# Error handling and logging
+
+Errors are where apps leak data and where silent failures cost money. Handle them on purpose.
+
+## Do
+
+- Catch errors at boundaries (route handlers, server actions, jobs, webhook handlers) and return a consistent shape: `{ error: "Something went wrong", requestId }` with the right status code (400, 401, 403, 404, 409, 429, 500).
+- Log the real error on the server with context (route, user id, request id), as structured JSON where possible.
+- Fail closed: if a permission check, signature check or token verification throws, deny the request.
+- Put a timeout on every outbound call (payment, email, AI and third-party APIs). Retry with exponential backoff only for idempotent operations, with a maximum attempt count.
+- Use an error monitoring service (Sentry or similar) in production and make sure alerts reach a person.
+- In React, add error boundaries (`error.tsx` in Next.js) so one broken component does not blank the page.
+- Show users what to do next: retry, contact support, or check their input.
+
+## Never
+
+- Send stack traces, SQL errors, file paths, internal hostnames or raw provider errors to the client in production.
+- Swallow errors with an empty `catch {}` or `catch (e) { console.log(e) }` and carry on as if it worked.
+- Log passwords, tokens, API keys, full card or bank details, or full request bodies of auth and payment routes.
+- Reveal whether an email exists in login, signup or password-reset errors ("If that account exists, we sent an email").
+- Retry a non-idempotent operation (charging a card, sending an email) without an idempotency key.
+
+## Example
+
+```ts
+export async function POST(req: Request) {
+  const requestId = crypto.randomUUID();
+  try {
+    return await handle(req);
+  } catch (err) {
+    logger.error({ requestId, route: "/api/orders", err: serializeError(err) });
+    return Response.json({ error: "Something went wrong. Please try again.", requestId }, { status: 500 });
+  }
+}
+```

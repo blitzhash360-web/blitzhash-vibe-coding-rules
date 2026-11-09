@@ -1,0 +1,48 @@
+---
+description: Rate limiting and abuse controls for login, signup, password reset, OTP, forms, uploads, public APIs and AI or other paid API calls. Shared stores, 429 responses, per-user quotas and spend caps.
+globs: **/api/**,**/routes/**,**/actions/**,**/middleware.*,**/functions/**,**/*ai*/**,**/*llm*,**/*openai*,**/*chat*/**
+alwaysApply: false
+---
+
+# Rate limits and abuse controls
+
+Without limits, one script can brute-force logins, spam your signup, drain your email quota or run up an AI bill overnight.
+
+## Do
+
+- Rate-limit at least: login, signup, password reset, OTP and magic-link sends, contact and waitlist forms, file uploads, search, and every route that calls a paid API (AI models, SMS, email).
+- Use a store shared by all instances. Serverless functions and multiple containers do not share memory, so an in-memory counter does little. Use Redis or Upstash (`@upstash/ratelimit`), Cloudflare rate limiting rules or Workers KV / Durable Objects, or your API gateway.
+- Key limits by user id when signed in and by IP otherwise. Read the client IP only from your platform's trusted header or helper; a raw `X-Forwarded-For` can be spoofed.
+- Return `429 Too Many Requests` with a `Retry-After` header and a friendly message.
+- Add edge protection for public forms: Cloudflare Turnstile, hCaptcha or reCAPTCHA on signup and contact forms.
+- AI features: per-user daily quotas, `max_tokens` on every call, a cheaper model for simple tasks, timeouts, and a hard spend cap or budget alert in the provider dashboard.
+- Log and alert on spikes of 401, 403 and 429 responses.
+
+## Never
+
+- Rely only on client-side throttling or a disabled button.
+- Ship an unauthenticated endpoint that calls a paid API.
+- Use one global limit for everyone; a single abuser should not lock out all users.
+
+## Example (Upstash Ratelimit in a Next.js route)
+
+```ts
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const limiter = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
+  prefix: "rl:ai-chat",
+});
+
+export async function POST(req: Request) {
+  const user = await requireUser();
+  const { success, reset } = await limiter.limit(user.id);
+  if (!success) {
+    const retryAfter = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    return Response.json({ error: "Too many requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
+  }
+  // ...call the AI provider with max_tokens and a timeout
+}
+```

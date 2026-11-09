@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Rules lint + markdown + links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Rules and skills frontmatter, sections, budgets, banned claims, secret scan
+        run: node scripts/lint-rules.mjs
+      - name: Markdown lint
+        run: npx -y markdownlint-cli2@0.24.0
+      - name: Markdown links (relative files and anchors)
+        run: node scripts/check-links.mjs
+      - name: Markdown links (external)
+        run: node scripts/check-links.mjs --external
+      - name: ShellCheck
+        run: shellcheck install.sh test/install.test.sh
+      - name: No secrets or .env files committed
+        run: |
+          ! git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'
+
+  pack-loads:
+    name: Installer + pack loads (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Bash version
+        run: /bin/bash --version | head -1
+      - name: Dry run for every target writes nothing
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in cursor claude codex agents-md windsurf copilot all; do
+            p="$(mktemp -d)"
+            /bin/bash ./install.sh --target "$t" --project "$p" --dry-run > "$RUNNER_TEMP/dry-$t.txt"
+            grep -q "DRY RUN: nothing was written." "$RUNNER_TEMP/dry-$t.txt"
+            test -z "$(ls -A "$p")"
+          done
+          cat "$RUNNER_TEMP/dry-all.txt"
+      - name: Install every target and check each tool format loads
+        shell: bash
+        run: |
+          set -euo pipefail
+          p="$(mktemp -d)"
+          /bin/bash ./install.sh --target all --project "$p" --yes
+          node scripts/lint-rules.mjs --installed "$p"
+      - name: Installer end-to-end tests (system /bin/bash)
+        run: /bin/bash test/install.test.sh
+
+  tests:
+    name: Unit tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: node --test test/*.test.mjs

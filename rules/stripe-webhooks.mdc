@@ -1,0 +1,61 @@
+---
+description: Payment webhooks (Stripe and similar). Verify the signature on the raw body, handle retries idempotently, fulfil orders from webhooks not redirect pages, and never trust client-side prices.
+globs: **/*webhook*/**,**/*webhook*,**/*stripe*,**/*billing*/**,**/*payment*/**,**/*checkout*/**
+alwaysApply: false
+---
+
+# Stripe webhooks and payments
+
+Anyone can POST to your webhook URL. Until the signature is verified, the payload is a stranger's claim that someone paid.
+
+## Do
+
+- Verify every event with the raw request body, the `Stripe-Signature` header and your endpoint secret (`STRIPE_WEBHOOK_SECRET`):
+  - Node: `stripe.webhooks.constructEvent(rawBody, signature, secret)`.
+  - Edge runtimes (Cloudflare Workers, Deno, Vercel Edge): `await stripe.webhooks.constructEventAsync(...)` with `Stripe.createSubtleCryptoProvider()`.
+  - Python: `stripe.Webhook.construct_event(payload, sig_header, secret)`.
+- Read the body as raw text or bytes. In Next.js App Router use `await req.text()`. In Express mount `express.raw({ type: "application/json" })` on the webhook route, before any JSON body parser.
+- Return `400` on a bad signature and do nothing else.
+- Make handlers idempotent: store processed `event.id` values (unique constraint) and skip duplicates. Stripe retries failed deliveries for days and can send the same event more than once.
+- Do not depend on event order. When state matters, re-fetch the object from the Stripe API (`stripe.subscriptions.retrieve(id)`) instead of trusting the event snapshot.
+- Fulfil orders, grant credits and change plans from the webhook (`checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`), never from the success redirect page.
+- Respond `2xx` quickly; move slow work to a queue or background job.
+- Create Checkout Sessions on the server with Price IDs you control. Map users to Stripe customers on the server.
+- Test locally with `stripe listen --forward-to localhost:3000/api/webhooks/stripe` and `stripe trigger checkout.session.completed`.
+
+## Never
+
+- `JSON.parse` the body and act on it without verifying the signature.
+- Accept `amount`, `price` or `priceId` chosen freely by the browser.
+- Log the full event payload with customer personal data, or log the webhook secret.
+- Treat "the user reached /success" as proof of payment.
+
+## Example (Next.js App Router)
+
+```ts
+import "server-only";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export async function POST(req: Request) {
+  const body = await req.text();
+  const signature = req.headers.get("stripe-signature");
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(body, signature!, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  if (await alreadyProcessed(event.id)) return new Response("ok");
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    await grantAccess(session.client_reference_id!, session.id);
+  }
+
+  await markProcessed(event.id);
+  return new Response("ok");
+}
+```

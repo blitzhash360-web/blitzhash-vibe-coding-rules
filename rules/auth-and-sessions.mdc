@@ -1,0 +1,45 @@
+---
+description: Authentication, sessions and authorization. Use a proven auth provider, verify tokens on the server, secure cookies, CSRF, safe redirects, password reset and role checks on every protected route.
+globs: **/auth/**,**/middleware.*,**/*session*,**/*login*,**/*signup*,**/api/**,**/actions/**,**/server/**
+alwaysApply: false
+---
+
+# Auth and sessions
+
+Most real breaches in AI-built apps are not clever hacks. They are a route that forgot to check who is calling.
+
+## Do
+
+- Use a proven provider or library (Auth.js, Clerk, Supabase Auth, Firebase Auth, your framework's built-in auth). Do not write your own password hashing, token signing or crypto.
+- Verify identity on the server for every protected request:
+  - Firebase: `getAuth().verifyIdToken(idToken)` with the Admin SDK.
+  - Supabase: in server code use `supabase.auth.getUser()` (or `getClaims()`), which validates the token, not `getSession()` alone, which only reads storage.
+  - Auth.js / Clerk: the server helpers (`auth()`), not a client-side hook.
+- Check authorization after authentication: role, plan and ownership of the specific record. Put checks in the handler or data layer, not only in middleware or the UI.
+- Session cookies: `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), sensible expiry. Rotate the session on login and privilege change; invalidate it on logout and password change.
+- Protect cookie-authenticated, state-changing requests from CSRF: `SameSite` cookies plus an `Origin` check or CSRF token. Next.js server actions check the origin; custom POST routes need their own check.
+- Redirect parameters (`next`, `redirect`, `returnTo`) accept relative same-site paths only.
+- Password reset and magic links: single use, short expiry, and the same response whether or not the email exists.
+- Require email verification before granting access to anything sensitive. Offer MFA for admin accounts.
+
+## Never
+
+- Trust `isAdmin`, `role` or `userId` from the request body, query string, `localStorage` or a decoded-but-unverified JWT.
+- Store session tokens or refresh tokens in `localStorage` when a cookie option exists.
+- Protect a page only by hiding it in the navigation, or only in client-side route guards.
+- Put admin endpoints at "secret" URLs instead of checking roles.
+- Disable CSRF protection, email verification or rate limits on login to "fix" a bug.
+
+## Example
+
+```ts
+// lib/auth-guard.ts
+import "server-only";
+
+export async function requireOwner(resourceUserId: string) {
+  const user = await getVerifiedUser(); // validates the session on the server
+  if (!user) throw new HttpError(401, "Sign in required");
+  if (user.id !== resourceUserId && user.role !== "admin") throw new HttpError(403, "Not allowed");
+  return user;
+}
+```

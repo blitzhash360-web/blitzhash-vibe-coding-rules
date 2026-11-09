@@ -1,0 +1,47 @@
+---
+description: Database access rules. Parameterized queries, least-privilege roles, row-level security for Postgres and Supabase, Firebase Security Rules, admin keys only on the server, ownership checks, pagination and indexes.
+globs: **/*.sql,**/migrations/**,**/supabase/**,**/prisma/**,**/drizzle/**,**/db/**,**/models/**,**/firestore.rules,**/storage.rules,**/database.rules.json,**/*repository*,**/*queries*
+alwaysApply: false
+---
+
+# Database access
+
+Assume every query can be called by an attacker with a valid account. The database, not the UI, decides who sees which rows.
+
+## Do
+
+- **Parameterized queries only.** `pg`: `query("select * from orders where id = $1", [id])`. Prisma: the ORM API or the `$queryRaw` tagged template. Drizzle: `` sql`...${value}` ``. Python: `cursor.execute(sql, params)`. Allowlist column names when sorting by user choice.
+- **Scope every query to the caller.** Filter by the verified user or org id from the session, and check ownership before update or delete (prevents IDOR: user A reading user B's invoice by changing an id).
+- **Row-level security when the browser talks to the database** (Supabase, PostgREST, Firebase, Hasura):
+  - Postgres or Supabase: `alter table ... enable row level security;` on every table in exposed schemas, then one policy per action. Use `using (...)` for reads and `with check (...)` for inserts and updates, for example `using ((select auth.uid()) = user_id)`. Index the columns your policies filter on.
+  - Firebase: start from deny-all, then `allow read, write: if request.auth != null && request.auth.uid == userId;` and validate fields in rules. Never ship test-mode rules.
+  - Storage buckets follow the same rules: private by default, signed URLs for downloads.
+- **Least privilege.** The app's database user is not a superuser and cannot drop tables. Use a separate role for migrations. Service-role or admin SDK credentials only in server code, and still filter by user there.
+- **Bound every list.** Paginate (`limit` plus cursor), select only the columns you need, and never return password hashes, tokens or internal flags.
+- Write migrations for schema and policy changes, and test policies with two real accounts plus an anonymous request.
+
+## Never
+
+- Build SQL with string concatenation or template literals: `` `... where email = '${email}'` ``. Not even "just for this admin page".
+- `$queryRawUnsafe` or `execute_sql` with user input.
+- `using (true)` or `allow read, write: if true` on non-public data, or "temporarily disable RLS to debug".
+- Ship a Supabase `service_role` / secret key or a Firebase Admin credential to the browser.
+- Trust a `userId` sent by the client for authorization.
+
+## Example (Postgres row-level security)
+
+```sql
+alter table public.invoices enable row level security;
+
+create policy "owners read their invoices" on public.invoices
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "owners create their invoices" on public.invoices
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create index if not exists invoices_user_id_idx on public.invoices (user_id);
+```
+
+`auth.uid()` is the Supabase helper; on plain Postgres use your own session variable or do the ownership check in server code.

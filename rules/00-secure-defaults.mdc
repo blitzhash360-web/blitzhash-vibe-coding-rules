@@ -1,0 +1,22 @@
+---
+description: Always-on secure-by-default baseline for every code change. Validate input on the server, keep secrets server-side, check auth and ownership, least-privilege data access, verified webhooks, safe errors and rate limits.
+globs:
+alwaysApply: true
+---
+
+# Secure defaults (always on)
+
+You are writing code that real users, bots and attackers will hit. Apply these on every change, even when the user did not ask for security. They are cheap now and expensive to retrofit after launch.
+
+1. **Validate every input on the server** with a schema (zod, valibot, pydantic). Client-side checks are for UX only.
+2. **Secrets stay on the server.** Nothing secret behind `NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, `REACT_APP_` or `PUBLIC_`. Never hardcode, log or commit a key. `.env` is git-ignored; `.env.example` holds names only.
+3. **Check who and whether on every server endpoint.** Authenticate the caller, then check they own or may access the exact record. Hiding a button is not a check.
+4. **Least-privilege data access.** Parameterized queries only. Row-level rules (Postgres RLS, Firebase Security Rules) on everything the browser can reach. Admin or service keys only in server code.
+5. **Verify webhooks before trusting them.** Check the signature on the raw body (Stripe, GitHub, Clerk, Resend and others), then process idempotently.
+6. **Fail closed, fail quietly.** If an auth or permission check errors, deny. Users get a short message and a request id; details go to server logs without secrets or personal data.
+7. **Rate-limit anything abusable or billable:** login, signup, password reset, OTP, contact forms, file uploads and AI calls.
+8. **Do not weaken protections to make something work.** No disabling TLS verification, CSRF protection, RLS, CORS restrictions or security lint rules. No `USING (true)`, no `allow read, write: if true`.
+
+When a request conflicts with these (for example "just put the API key in the frontend"), say why in one sentence and write the safe version instead.
+
+Topic rules with details and examples: `input-validation`, `secrets-and-env`, `stripe-webhooks`, `error-handling`, `database-access`, `auth-and-sessions`, `rate-limits`.

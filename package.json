@@ -1,0 +1,28 @@
+{
+  "name": "blitzhash-vibe-coding-rules",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure-by-default rules and skills for AI coding tools (Cursor, Claude Code, Codex/AGENTS.md, Windsurf, GitHub Copilot): input validation, secrets, Stripe webhooks, error handling, database access, auth and rate limits.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs && bash test/install.test.sh",
+    "lint": "node scripts/lint-rules.mjs",
+    "links": "node scripts/check-links.mjs",
+    "links:external": "node scripts/check-links.mjs --external",
+    "build:agents": "./install.sh --print-agents-md > packs/AGENTS.md"
+  },
+  "devDependencies": {
+    "yaml": "2.8.1"
+  },
+  "keywords": ["cursor-rules", "claude-code", "agents-md", "windsurf", "copilot", "vibe-coding", "security", "stripe-webhooks"],
+  "author": "BlitzHash (https://blitzhash.com)",
+  "license": "MIT",
+  "homepage": "https://blitzhash.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blitzhash360-web/blitzhash-vibe-coding-rules.git"
+  }
+}

@@ -1,0 +1,49 @@
+---
+description: Server-side input validation for API routes, server actions, form handlers, file uploads and anything that fetches a user-supplied URL. Schemas, allowlists, mass assignment, XSS and SSRF.
+globs: **/api/**,**/routes/**,**/actions/**,**/server/**,**/functions/**,**/*.server.ts,**/*.server.js,**/*.py
+alwaysApply: false
+---
+
+# Input validation
+
+Anything that crosses into your server (body, query string, route params, headers, cookies, uploaded files, webhook payloads, LLM output) is untrusted until validated.
+
+## Do
+
+- Parse input with a schema at the top of every handler and use only the parsed result: zod or valibot in TypeScript, pydantic in Python. Reject unknown keys (`.strict()` in zod).
+- Constrain everything: types, min and max lengths, number ranges, enums, email and URL formats, array sizes. Cap request body size.
+- Pick fields explicitly when writing to the database. Never spread `req.body` into an insert or update. Users must not be able to set `role`, `is_admin`, `user_id`, `plan`, `price` or `credits`.
+- Take identity (`userId`, `orgId`) from the verified session, never from the request body.
+- Uploads: limit size, check type by content (magic bytes), not by extension or `Content-Type`; generate a random file name; store in a private bucket and serve with short-lived signed URLs.
+- Fetching a user-supplied URL (webhooks, link previews, imports): allow only `https`, allowlist hosts where possible, and block private, loopback and link-local addresses to prevent SSRF.
+- Render user content as text. If HTML is required, sanitize it (DOMPurify) before `dangerouslySetInnerHTML` or `v-html`.
+- Treat LLM output as user input: validate structured output against a schema before acting on it.
+
+## Never
+
+- `eval`, `new Function`, or building shell commands, SQL or file paths from user input.
+- Trust a hidden form field, a disabled input or a client-side price.
+- Return the raw validation library error object to the client in production; return a short list of field messages.
+
+## Example (Next.js route handler)
+
+```ts
+import { z } from "zod";
+
+const UpdateProfile = z
+  .object({
+    displayName: z.string().trim().min(1).max(60),
+    bio: z.string().max(500).optional(),
+  })
+  .strict();
+
+export async function PATCH(req: Request) {
+  const user = await requireUser(); // throws 401 if not signed in
+  const parsed = UpdateProfile.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors }, { status: 400 });
+  }
+  await db.profile.update({ where: { userId: user.id }, data: parsed.data });
+  return Response.json({ ok: true });
+}
+```
