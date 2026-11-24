@@ -8,7 +8,7 @@
 [![Formats](https://img.shields.io/badge/formats-.mdc%20%C2%B7%20SKILL.md%20%C2%B7%20AGENTS.md-6e40c9.svg)](docs/TOOLS.md)
 [![Built by BlitzHash](https://img.shields.io/badge/built%20by-BlitzHash-0a1628.svg)](https://blitzhash.com)
 
-AI coding tools write the happy path well. They often skip the parts that hurt after launch: the webhook nobody verified, the API route anyone can call, the secret behind `NEXT_PUBLIC_`, the query built from a string. This pack gives your AI tool **8 short rules and 4 skills** so it writes those parts correctly the first time, without you having to remember to ask.
+AI coding tools write the happy path well. They often skip the parts that hurt after launch: the webhook nobody verified, the API route anyone can call, the secret behind `NEXT_PUBLIC_`, the query built from a string. This pack gives your AI tool **11 short rules and 6 skills** so it writes those parts correctly the first time, without you having to remember to ask: the security defaults, plus lean changes, production UI states, and honest founder copy.
 
 ![Installer dry run](assets/install-dryrun.png)
 <sub>`./install.sh --target all --dry-run` lists every file it would write. Nothing is written until you drop `--dry-run`.</sub>
@@ -44,8 +44,11 @@ No bash? Copy [packs/AGENTS.md](packs/AGENTS.md) into your project root, or see 
 | [`database-access`](rules/database-access.mdc) | SQL, migrations, ORM, rules files | Parameterized queries, scope every query to the caller, Postgres RLS (Supabase as one example) and Firebase Security Rules done right, admin keys server-only, bounded lists. |
 | [`auth-and-sessions`](rules/auth-and-sessions.mdc) | auth, middleware, API | Verify tokens on the server (Auth.js, Clerk, Firebase, Supabase), ownership checks, secure cookies, CSRF, safe redirects, reset links that do not leak accounts. |
 | [`rate-limits`](rules/rate-limits.mdc) | API, actions, AI routes | Shared-store limits (Upstash, Redis, Cloudflare) on login, signup, forms and AI calls, 429 with `Retry-After`, per-user AI quotas and spend caps. |
+| [`lean-changes`](rules/lean-changes.mdc) | most code files | Prefer the smallest change: delete before add, no speculative helpers, no drive-by refactors. |
+| [`ui-production-gates`](rules/ui-production-gates.mdc) | UI, pages, CSS | Loading, empty and error states, usable mobile forms, accessibility basics, no invented trust badges. |
+| [`founder-copy`](rules/founder-copy.mdc) | landing, UI copy, locales | Human, specific product copy. No fake metrics, testimonials or AI filler. |
 
-Each topic rule has `Do`, `Never` and one copy-ready example. All 8 together are about 19 KB, so they fit comfortably in an `AGENTS.md`.
+Each topic rule has `Do`, `Never` and one copy-ready example. All 11 together still fit in a single `AGENTS.md`.
 
 ### The skills
 
@@ -57,6 +60,8 @@ For tools that support `SKILL.md` (Claude Code, Cursor, Codex). Skills load only
 | [`stripe-webhook-setup`](skills/stripe-webhook-setup/SKILL.md) | Payments that work end to end: raw body, signature, idempotency table, events to subscribe, `stripe listen` / `stripe trigger` tests. |
 | [`database-access-rules`](skills/database-access-rules/SKILL.md) | Access matrix, RLS policies or Firebase rules as a migration, then tests with two real accounts and an anonymous one. |
 | [`add-rate-limiting`](skills/add-rate-limiting/SKILL.md) | Pick limits per route, the right shared store for your host, 429 handling, AI quotas. |
+| [`launch-polish`](skills/launch-polish/SKILL.md) | Pre-launch pass on empty/error/mobile states, forms, accessibility and honest landing copy. |
+| [`lean-changes`](skills/lean-changes/SKILL.md) | Keep the next diff as small as a senior engineer would accept. |
 
 ### Before and after
 
@@ -102,7 +107,8 @@ The installer never overwrites a file it did not create (it reports `skip`), kee
 
 - **These rules prevent** problems while the code is being written.
 - **[BlitzHash Senior Engineer Skills](https://github.com/blitzhash360-web/blitzhash-senior-engineer-skills) find** what already slipped through: launch-readiness audit, security review, scaling, cloud cost and backups, with a scanner that scores your project out of 100.
-- **[BlitzHash Launch-Ready Check](https://github.com/blitzhash360-web/blitzhash-launch-ready-check) scans** your live URL for headers, leaked keys, rate limits, SEO and auth smells.
+- **[BlitzHash Launch-Ready Check](https://github.com/blitzhash360-web/blitzhash-launch-ready-check) scans** your live URL for headers, leaked keys, rate limits, SEO, auth smells and leftover files.
+- **[BlitzHash Shield](https://github.com/blitzhash360-web/BlitzHash-shield) inspects** shipped client JS for source maps and then optionally obfuscates it.
 
 Use all three: rules while you build, skills before you launch, the URL check after you deploy.
 

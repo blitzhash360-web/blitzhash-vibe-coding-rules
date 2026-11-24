@@ -1,0 +1,34 @@
+---
+description: Prefer the smallest change that solves the request. Delete before adding, no speculative abstractions, no drive-by refactors, keep the diff budget tight for vibe-coded apps.
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.mjs,**/*.cjs,**/*.py,**/*.go,**/*.vue,**/*.svelte
+alwaysApply: false
+---
+
+# Prefer the smallest change
+
+A senior engineer changes as little as possible. Extra files, wrappers and "while we're here" refactors are how AI-built apps get hard to ship.
+
+## Do
+
+- Restate the request in one sentence, then change only what that sentence needs.
+- Delete or simplify dead code before adding a new helper, hook or folder.
+- Reuse a function or component that already does the job. Do not invent a new abstraction for a single call site.
+- Keep names, files and patterns the project already uses unless the user asked for a rename.
+- If a larger redesign would be better, say so in one short paragraph and still ship the small fix first, unless the user asked for the redesign.
+
+## Never
+
+- Add a new layer (service, hook, context, state library, folder of utils) "for later" or for a single use.
+- Rewrite unrelated files, reformat the repo, or swap libraries as a side effect of a small request.
+- Duplicate a feature that already exists elsewhere in the app.
+
+## Example (smallest fix, not a new helper)
+
+```ts
+// BEFORE: a new useOrderTotals hook, a totals.ts util and a rename, just to show a total.
+// AFTER: use the price already computed on the order in this component.
+export function OrderTotal({ order }: { order: Order }) {
+  const total = order.lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0);
+  return <p>Total {formatMoney(total)}</p>;
+}
+```

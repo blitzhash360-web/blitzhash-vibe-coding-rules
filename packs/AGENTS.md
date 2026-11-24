@@ -24,7 +24,7 @@ You are writing code that real users, bots and attackers will hit. Apply these o
 
 When a request conflicts with these (for example "just put the API key in the frontend"), say why in one sentence and write the safe version instead.
 
-Topic rules with details and examples: `input-validation`, `secrets-and-env`, `stripe-webhooks`, `error-handling`, `database-access`, `auth-and-sessions`, `rate-limits`.
+Topic rules with details and examples: `input-validation`, `secrets-and-env`, `stripe-webhooks`, `error-handling`, `database-access`, `auth-and-sessions`, `rate-limits`, `lean-changes`, `ui-production-gates`, `founder-copy`.
 
 ### Auth and sessions
 
@@ -144,6 +144,38 @@ export async function POST(req: Request) {
 }
 ```
 
+### Founder copy that sounds human
+
+Users can tell when a landing page or an error message was left as AI filler. Say what the product does, honestly, in the words you would use in an email.
+
+#### Do
+
+- Lead with what the product does and who it is for, in one short sentence. Then one clear action.
+- Write error, empty and onboarding strings the way you would explain them to a customer. Name the next step.
+- Use only metrics, customer names, logos and quotes you can stand behind. If you do not have them yet, omit them.
+- Prefer short words and specific nouns. Cut throat-clearing openers and padded adjectives.
+- Keep the same voice across the landing page, emails and in-app empty states.
+
+#### Never
+
+- Invent "trusted by 10,000 teams", award badges, or testimonials.
+- Use filler such as "unlock the power of", "in today's fast-paced world", "seamless experience" or "we're thrilled to announce" unless that is genuinely how this founder talks and the fact is true.
+- Hide the product behind a metaphor. If it is a billing tool, say it is a billing tool.
+
+#### Example (honest hero, no invented proof)
+
+```tsx
+export function Hero() {
+  return (
+    <section>
+      <h1>See which leftover files your app still exposes, before your customers do.</h1>
+      <p>A one-command check for founders who built with AI. No account.</p>
+      <a href="/start">Scan your site</a>
+    </section>
+  );
+}
+```
+
 ### Input validation
 
 Anything that crosses into your server (body, query string, route params, headers, cookies, uploaded files, webhook payloads, LLM output) is untrusted until validated.
@@ -185,6 +217,35 @@ export async function PATCH(req: Request) {
   }
   await db.profile.update({ where: { userId: user.id }, data: parsed.data });
   return Response.json({ ok: true });
+}
+```
+
+### Prefer the smallest change
+
+A senior engineer changes as little as possible. Extra files, wrappers and "while we're here" refactors are how AI-built apps get hard to ship.
+
+#### Do
+
+- Restate the request in one sentence, then change only what that sentence needs.
+- Delete or simplify dead code before adding a new helper, hook or folder.
+- Reuse a function or component that already does the job. Do not invent a new abstraction for a single call site.
+- Keep names, files and patterns the project already uses unless the user asked for a rename.
+- If a larger redesign would be better, say so in one short paragraph and still ship the small fix first, unless the user asked for the redesign.
+
+#### Never
+
+- Add a new layer (service, hook, context, state library, folder of utils) "for later" or for a single use.
+- Rewrite unrelated files, reformat the repo, or swap libraries as a side effect of a small request.
+- Duplicate a feature that already exists elsewhere in the app.
+
+#### Example (smallest fix, not a new helper)
+
+```ts
+// BEFORE: a new useOrderTotals hook, a totals.ts util and a rename, just to show a total.
+// AFTER: use the price already computed on the order in this component.
+export function OrderTotal({ order }: { order: Order }) {
+  const total = order.lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0);
+  return <p>Total {formatMoney(total)}</p>;
 }
 ```
 
@@ -324,6 +385,36 @@ export async function POST(req: Request) {
 
   await markProcessed(event.id);
   return new Response("ok");
+}
+```
+
+### Production UI gates
+
+Pretty mocks are not enough. Every screen a user can reach needs a loading state, an empty state, an error state, a usable mobile layout and forms that fail safely.
+
+#### Do
+
+- Give every data-backed view three states besides "success": loading, empty, and error, with a way to retry when a request fails.
+- Forms: visible labels, `autocomplete` where it helps, a disabled submit while in flight, errors next to the field, and no lost input after a failed submit.
+- Keep the primary action reachable on a narrow phone screen. No hover-only controls, no horizontal overflow of the main content.
+- Use semantic HTML (`button`, `a`, `label`, headings in order). Images need alt text; icon-only buttons need an accessible name.
+- Do not invent metrics, logos or testimonials on a marketing screen. If a trust signal is not real, leave it out.
+- Prefer the project's existing components and spacing. Do not drop in a new UI kit for one page.
+
+#### Never
+
+- Ship a blank page, a hanging spinner, or a raw exception as the only failed state.
+- Submit a form with no server-side check because the button looked validated.
+- Block the whole app on a single widget failing to load.
+
+#### Example (empty, error and loading, not just the table)
+
+```tsx
+export function ProjectList({ state }: { state: ListState }) {
+  if (state.status === "loading") return <p>Loading your projects…</p>;
+  if (state.status === "error") return <p role="alert">Could not load projects. <button onClick={state.retry}>Try again</button></p>;
+  if (state.items.length === 0) return <p>No projects yet. <a href="/new">Create the first one</a>.</p>;
+  return <ul>{state.items.map((p) => <li key={p.id}><a href={`/projects/${p.id}`}>{p.name}</a></li>)}</ul>;
 }
 ```
 

@@ -1,0 +1,37 @@
+---
+description: Rewrite landing, error, empty and onboarding copy so it sounds like a clear human founder. No fake metrics, no invented testimonials, no AI filler phrases.
+globs: **/*.tsx,**/*.jsx,**/*.md,**/*.mdx,**/*.json,**/app/**,**/pages/**,**/messages/**,**/locales/**,**/content/**
+alwaysApply: false
+---
+
+# Founder copy that sounds human
+
+Users can tell when a landing page or an error message was left as AI filler. Say what the product does, honestly, in the words you would use in an email.
+
+## Do
+
+- Lead with what the product does and who it is for, in one short sentence. Then one clear action.
+- Write error, empty and onboarding strings the way you would explain them to a customer. Name the next step.
+- Use only metrics, customer names, logos and quotes you can stand behind. If you do not have them yet, omit them.
+- Prefer short words and specific nouns. Cut throat-clearing openers and padded adjectives.
+- Keep the same voice across the landing page, emails and in-app empty states.
+
+## Never
+
+- Invent "trusted by 10,000 teams", award badges, or testimonials.
+- Use filler such as "unlock the power of", "in today's fast-paced world", "seamless experience" or "we're thrilled to announce" unless that is genuinely how this founder talks and the fact is true.
+- Hide the product behind a metaphor. If it is a billing tool, say it is a billing tool.
+
+## Example (honest hero, no invented proof)
+
+```tsx
+export function Hero() {
+  return (
+    <section>
+      <h1>See which leftover files your app still exposes, before your customers do.</h1>
+      <p>A one-command check for founders who built with AI. No account.</p>
+      <a href="/start">Scan your site</a>
+    </section>
+  );
+}
+```

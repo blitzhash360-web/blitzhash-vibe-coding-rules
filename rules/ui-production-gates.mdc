@@ -1,0 +1,35 @@
+---
+description: Production UI gates for forms, loading, empty and error states, mobile layout and accessibility, so AI-built screens work for real users and not only the happy-path mock.
+globs: **/*.tsx,**/*.jsx,**/*.vue,**/*.svelte,**/*.css,**/*.scss,**/app/**,**/pages/**,**/components/**
+alwaysApply: false
+---
+
+# Production UI gates
+
+Pretty mocks are not enough. Every screen a user can reach needs a loading state, an empty state, an error state, a usable mobile layout and forms that fail safely.
+
+## Do
+
+- Give every data-backed view three states besides "success": loading, empty, and error, with a way to retry when a request fails.
+- Forms: visible labels, `autocomplete` where it helps, a disabled submit while in flight, errors next to the field, and no lost input after a failed submit.
+- Keep the primary action reachable on a narrow phone screen. No hover-only controls, no horizontal overflow of the main content.
+- Use semantic HTML (`button`, `a`, `label`, headings in order). Images need alt text; icon-only buttons need an accessible name.
+- Do not invent metrics, logos or testimonials on a marketing screen. If a trust signal is not real, leave it out.
+- Prefer the project's existing components and spacing. Do not drop in a new UI kit for one page.
+
+## Never
+
+- Ship a blank page, a hanging spinner, or a raw exception as the only failed state.
+- Submit a form with no server-side check because the button looked validated.
+- Block the whole app on a single widget failing to load.
+
+## Example (empty, error and loading, not just the table)
+
+```tsx
+export function ProjectList({ state }: { state: ListState }) {
+  if (state.status === "loading") return <p>Loading your projects…</p>;
+  if (state.status === "error") return <p role="alert">Could not load projects. <button onClick={state.retry}>Try again</button></p>;
+  if (state.items.length === 0) return <p>No projects yet. <a href="/new">Create the first one</a>.</p>;
+  return <ul>{state.items.map((p) => <li key={p.id}><a href={`/projects/${p.id}`}>{p.name}</a></li>)}</ul>;
+}
+```

@@ -25,7 +25,7 @@ const expectFail = (dir, pattern) => {
 test("the shipped pack passes lint", () => {
   const r = lint();
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /Rules: 8 {2}Skills: 4/);
+  assert.match(r.stdout, /Rules: 11 {2}Skills: 6/);
 });
 
 test("rule without frontmatter fails", () => {

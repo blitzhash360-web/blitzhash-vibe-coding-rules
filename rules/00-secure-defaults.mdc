@@ -19,4 +19,4 @@ You are writing code that real users, bots and attackers will hit. Apply these o
 
 When a request conflicts with these (for example "just put the API key in the frontend"), say why in one sentence and write the safe version instead.
 
-Topic rules with details and examples: `input-validation`, `secrets-and-env`, `stripe-webhooks`, `error-handling`, `database-access`, `auth-and-sessions`, `rate-limits`.
+Topic rules with details and examples: `input-validation`, `secrets-and-env`, `stripe-webhooks`, `error-handling`, `database-access`, `auth-and-sessions`, `rate-limits`, `lean-changes`, `ui-production-gates`, `founder-copy`.
